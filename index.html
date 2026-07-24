@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Einstein's Riddle</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#F4F4F5">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    --bg:#F4F4F5; --surface:#FFFFFF; --ink:#1B1B1D; --sub:#6E6E73; --line:#D6D6D9; --accent:#2E2E31;
+    --accent-soft:#E2E2E4; --ok:#4B7A63; --bad:#8A4A44; --divider-strong:#9C9CA0; --chip-bg:#E9E9EA;
+    background: var(--bg); color: var(--ink); font-family: var(--font-main);
+    min-height: 100vh; transition: background .2s, color .2s;
+  }
+  body { --font-main: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  body[data-font="serif"] { --font-main: "AppleMyungjo", "Noto Serif KR", ui-serif, Georgia, serif; }
+  body[data-font="sans"] { --font-main: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  body[data-mode="dark"] {
+    --bg:#161617; --surface:#1E1E20; --ink:#EDEDEE; --sub:#98989D; --line:#2B2B2D; --accent:#D8D8DA;
+    --accent-soft:#252527; --ok:#6FBF98; --bad:#C97A72; --divider-strong:#55555A; --chip-bg:#232325;
+  }
+  body[data-mode="navy"] {
+    --bg:#1B2430; --surface:#212B38; --ink:#E8ECF2; --sub:#8B96A8; --line:#2E3A4A; --accent:#C7D2E0;
+    --accent-soft:#26313F; --ok:#6FBF98; --bad:#E38A82; --divider-strong:#465468; --chip-bg:#212C3A;
+  }
+  body[data-mode="cream"] {
+    --bg:#F3ECDD; --surface:#FBF6EA; --ink:#2E2A22; --sub:#7A7160; --line:#DCD2B8; --accent:#3A3428;
+    --accent-soft:#E8DFC6; --ok:#4B7A63; --bad:#8A4A44; --divider-strong:#B9AD8C; --chip-bg:#EAE1CC;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .l-splash {
+    position: fixed; inset: 0; background: var(--bg); z-index: 500;
+    display:flex; align-items:center; justify-content:center;
+    transition: opacity .6s ease; opacity: 1;
+  }
+  .l-splash.fade { opacity: 0; pointer-events: none; }
+  .l-splash-icon { width: 60px; height: 60px; color: var(--ink); }
+
+  .l-header-bar {
+    position: fixed; top:0; left:0; right:0; z-index:200;
+    background: var(--bg); border-bottom: 1px solid var(--divider-strong);
+  }
+  .l-header-inner {
+    max-width: 640px; margin: 0 auto; padding: 14px 24px;
+    display:flex; justify-content:space-between; align-items:center; gap: 10px;
+  }
+  .l-title { font-weight: 700; color: var(--ink); font-size: 15.5px; }
+  .l-topbtns { display:flex; gap: 6px; flex-shrink: 0; }
+  .l-mini-btn {
+    border:1px solid var(--line); background:transparent; color: var(--ink);
+    display:inline-flex; align-items:center; justify-content:center;
+    padding: 4px; border-radius:4px; cursor:pointer; line-height:0;
+  }
+  .l-icon { width:15px; height:15px; display:block; }
+
+  .l-center-stage { min-height: 100vh; display:flex; align-items:center; justify-content:center; padding: 70px 24px 40px; }
+  .l-wrap { max-width: 640px; margin: 0 auto; width: 100%; }
+
+  .l-group { text-align:center; }
+  .l-group-label { font-size: 12px; font-weight: 700; color: var(--sub); letter-spacing: .02em; margin-bottom: 16px; }
+  .l-group-divider { border-top: 1px solid var(--divider-strong); margin: 26px 0; }
+
+  .l-mode-tabs { display:flex; justify-content:center; align-items:center; gap: 16px; }
+  .l-mode-tab { font-size: 17px; font-weight: 700; color: var(--sub); cursor: pointer; }
+  .l-mode-tab.active { color: var(--ink); }
+  .l-mode-divider { color: var(--line); font-size: 15px; }
+
+  .l-config-row { display:flex; justify-content:center; align-items:center; gap: 28px; }
+  .l-config-item { display:flex; align-items:center; gap: 10px; }
+  .l-config-label { font-size: 12.5px; color: var(--sub); }
+
+  .l-chip { position:relative; display:inline-block; }
+  .l-chip button.l-chip-btn {
+    border:1px solid var(--line); background: var(--chip-bg); color: var(--sub); font-family: var(--font-main); font-size:12.5px;
+    padding:3px 7px; border-radius:6px; cursor:pointer; min-width:48px; font-weight: 400;
+  }
+  .l-chip button.l-chip-btn.filled { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); font-weight:400; }
+  .l-opts {
+    position: fixed; background: var(--surface); border:1px solid var(--line); border-radius:6px;
+    box-shadow:0 8px 20px rgba(0,0,0,.16); z-index:130; min-width:70px; max-height:212px; overflow-y:auto; font-family: var(--font-main);
+  }
+  .l-opts div { padding:7px 14px; font-size:12.5px; cursor:pointer; color: var(--ink); text-align:center; }
+  .l-opts div:hover { background: var(--accent-soft); }
+
+  .l-start-row { display:flex; justify-content:center; }
+  .l-confirm-link { font-size:14px; font-weight:600; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor:pointer; }
+
+  .l-modal-overlay {
+    position: fixed; inset: 0; background: rgba(20,20,22,.28); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    display:none; align-items:center; justify-content:center; z-index:250; padding: 20px;
+  }
+  .l-modal-overlay.show { display:flex; }
+  .l-modal {
+    background: var(--surface); color: var(--ink); border-radius:14px; padding:24px 22px; max-width:340px; width:100%;
+    box-shadow:0 24px 60px rgba(0,0,0,.3); font-family: var(--font-main);
+  }
+  .l-modal h3 { font-size:15px; font-weight:700; margin:0 0 14px; text-align:center; }
+  .l-modal-msg { font-size:13.5px; line-height:1.6; margin: 0 0 8px; text-align:center; }
+  .l-modal-actions { display:flex; justify-content:center; gap:48px; margin-top: 16px; }
+  .l-modal-action { font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:2px; cursor:pointer; color: var(--sub); }
+  .l-modal-action.primary { color: var(--ink); }
+  .l-setting-row { display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .l-setting-row:last-of-type { border-bottom: none; }
+  .l-font-pick { display:flex; gap:12px; }
+  .l-font-opt { font-size:12.5px; cursor:pointer; color: var(--sub); text-decoration: underline; text-underline-offset: 2px; }
+  .l-font-opt.active { color: var(--ink); font-weight:700; }
+  .l-modal-note { font-size:12px; color: var(--sub); margin-top: 8px; min-height: 16px; }
+  .l-slider-wrap { position: relative; margin-top: 10px; }
+  .l-slider { width: 100%; margin: 0; display:block; -webkit-appearance: none; appearance: none; height: 3px; background: var(--line); border-radius: 2px; outline: none; position:relative; z-index:1; }
+  .l-slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background: var(--ink); cursor:pointer; }
+  .l-slider::-moz-range-thumb { width:14px; height:14px; border-radius:50%; background: var(--ink); border:none; cursor:pointer; }
+  .l-slider-ticks { position:absolute; left:7px; right:7px; top:50%; height:8px; transform:translateY(-50%); display:flex; justify-content:space-between; pointer-events:none; z-index:0; }
+  .l-slider-ticks span { width:1px; height:8px; background: var(--sub); opacity:.5; }
+</style>
+</head>
+<body data-mode="light" data-font="sans">
+<script>
+  (function () {
+    var m = localStorage.getItem('epz_theme');
+    var f = localStorage.getItem('epz_font');
+    var t = localStorage.getItem('epz_textsize');
+    if (m) document.body.dataset.mode = m;
+    if (f) document.body.dataset.font = f;
+    if (t) document.body.dataset.textsize = t;
+  })();
+</script>
+
+<div class="l-splash" id="splash">
+  <svg class="l-splash-icon" viewBox="0 0 100 100" fill="currentColor"><rect x="18" y="12" width="64" height="16"/><rect x="18" y="42" width="54" height="16"/><rect x="18" y="72" width="64" height="16"/></svg>
+</div>
+
+<div class="l-header-bar">
+  <div class="l-header-inner">
+    <span class="l-title">Einstein's Riddle ⚘</span>
+    <span class="l-topbtns">
+      <button class="l-mini-btn" id="btn-record" title="기록"><svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></button>
+      <button class="l-mini-btn" id="btn-theme" title="테마"></button>
+      <button class="l-mini-btn" id="btn-settings" title="설정"><svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </span>
+  </div>
+</div>
+
+<div class="l-center-stage">
+  <div class="l-wrap">
+    <div class="l-group">
+      <div class="l-group-label">행 × 열</div>
+      <div class="l-config-row">
+        <div class="l-config-item">
+          <span class="l-config-label">행</span>
+          <div class="l-chip"><button class="l-chip-btn filled" id="rows-btn">4</button></div>
+        </div>
+        <div class="l-config-item">
+          <span class="l-config-label">열</span>
+          <div class="l-chip"><button class="l-chip-btn filled" id="cols-btn">4</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="l-group-divider"></div>
+
+    <div class="l-group">
+      <div class="l-group-label">모드</div>
+      <div class="l-mode-tabs">
+        <span class="l-mode-tab active" data-mode="practice">연습 모드</span>
+        <span class="l-mode-divider">|</span>
+        <span class="l-mode-tab" data-mode="challenge">도전 모드</span>
+      </div>
+    </div>
+    <div class="l-group-divider"></div>
+
+    <div class="l-start-row">
+      <a class="l-confirm-link" id="start-link" href="game.html?mode=practice&rows=4&cols=4">시작하기 →</a>
+    </div>
+  </div>
+</div>
+
+<div class="l-modal-overlay" id="modalOverlay"><div class="l-modal" id="modalBox"></div></div>
+
+<script>
+  setTimeout(() => {
+    const s = document.getElementById('splash');
+    s.classList.add('fade');
+    setTimeout(() => { s.style.display = 'none'; }, 650);
+  }, 1500);
+
+  const icons = {
+    light: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
+    navy: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 16a3 3 0 0 1 0 6H7a5 5 0 1 1 4.9-6z"/><path d="M18.376 14.512a6 6 0 0 0 3.461-4.127c.148-.625-.659-.97-1.248-.714a4 4 0 0 1-5.259-5.26c.255-.589-.09-1.395-.716-1.248a6 6 0 0 0-4.594 5.36"/></svg>',
+    dark: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>',
+    cream: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/></svg>',
+  };
+  const modeSeq = ['light', 'navy', 'dark', 'cream'];
+  let mode = document.body.dataset.mode || 'light';
+  let font = document.body.dataset.font || 'sans';
+  let textsize = document.body.dataset.textsize || '0';
+  document.getElementById('btn-theme').innerHTML = icons[mode];
+
+  function persist() {
+    localStorage.setItem('epz_theme', mode);
+    localStorage.setItem('epz_font', font);
+    localStorage.setItem('epz_textsize', textsize);
+  }
+
+  document.getElementById('btn-theme').addEventListener('click', () => {
+    mode = modeSeq[(modeSeq.indexOf(mode) + 1) % modeSeq.length];
+    document.body.dataset.mode = mode;
+    document.getElementById('btn-theme').innerHTML = icons[mode];
+    persist();
+  });
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  function showModal(html) { box.innerHTML = html; overlay.classList.add('show'); }
+  function hideModal() { overlay.classList.remove('show'); }
+  overlay.addEventListener('click', e => { if (e.target === overlay) hideModal(); });
+
+  document.getElementById('btn-record').addEventListener('click', () => {
+    showModal(
+      '<p class="l-modal-msg">기록 화면은 다음 업데이트에서 연결됩니다.</p>' +
+      '<div class="l-modal-actions"><span class="l-modal-action primary" data-act="close">닫기</span></div>'
+    );
+    box.querySelector('[data-act="close"]').addEventListener('click', hideModal);
+  });
+
+  // ---- 모드 탭 / 행·열 / 시작 링크 ----
+  let selectedMode = 'practice';
+  let rowsN = 4, colsN = 4;
+
+  function updateStartLink() {
+    document.getElementById('start-link').href = `game.html?mode=${selectedMode}&rows=${rowsN}&cols=${colsN}`;
+  }
+
+  document.querySelectorAll('.l-mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      selectedMode = tab.dataset.mode;
+      document.querySelectorAll('.l-mode-tab').forEach(t => t.classList.toggle('active', t === tab));
+      updateStartLink();
+    });
+  });
+
+  function closeOpts() { document.querySelectorAll('.l-opts').forEach(o => o.remove()); }
+  function openNumberOpts(btn, onPick) {
+    closeOpts();
+    const r = btn.getBoundingClientRect();
+    const list = document.createElement('div'); list.className = 'l-opts';
+    for (let n = 3; n <= 10; n++) {
+      const d = document.createElement('div'); d.textContent = n;
+      d.addEventListener('click', ev => { ev.stopPropagation(); onPick(n); closeOpts(); });
+      list.appendChild(d);
+    }
+    document.body.appendChild(list);
+    list.style.top = (r.bottom + 4) + 'px';
+    list.style.left = r.left + 'px';
+  }
+  document.addEventListener('click', e => { if (!e.target.closest('.l-chip-btn') && !e.target.closest('.l-opts')) closeOpts(); });
+  window.addEventListener('scroll', closeOpts, true);
+
+  document.getElementById('rows-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    openNumberOpts(e.target, n => { rowsN = n; e.target.textContent = n; updateStartLink(); });
+  });
+  document.getElementById('cols-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    openNumberOpts(e.target, n => { colsN = n; e.target.textContent = n; updateStartLink(); });
+  });
+
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    showModal(
+      '<h3>설정</h3>' +
+      '<div class="l-setting-row"><span>글꼴 바꾸기</span><span class="l-font-pick">' +
+      `<span class="l-font-opt ${font === 'sans' ? 'active' : ''}" data-f="sans">산세리프</span>` +
+      `<span class="l-font-opt ${font === 'serif' ? 'active' : ''}" data-f="serif">세리프</span>` +
+      '</span></div>' +
+      '<div class="l-setting-row"><span>글자 크기</span>' +
+      '<div class="l-slider-wrap">' +
+      `<input type="range" class="l-slider" id="textsize-slider" min="0" max="2" step="1" value="${textsize}">` +
+      '<div class="l-slider-ticks"><span></span><span></span><span></span></div>' +
+      '</div>' +
+      '</div>' +
+      '<div class="l-setting-row"><span>언어 설정</span><span class="l-modal-action" data-act="demo">한국어 ▾</span></div>' +
+      '<div class="l-setting-row"><span>음향 설정</span><span class="l-modal-action" data-act="demo">켜짐 ▾</span></div>' +
+      '<p class="l-modal-note"></p>' +
+      '<div class="l-modal-actions"><span class="l-modal-action primary" data-act="close">닫기</span></div>'
+    );
+    box.querySelectorAll('.l-font-opt').forEach(el => {
+      el.addEventListener('click', () => {
+        font = el.dataset.f;
+        document.body.dataset.font = font;
+        box.querySelectorAll('.l-font-opt').forEach(o => o.classList.toggle('active', o === el));
+        persist();
+      });
+    });
+    box.querySelector('#textsize-slider').addEventListener('input', (e) => {
+      textsize = e.target.value;
+      document.body.dataset.textsize = textsize;
+      persist();
+    });
+    box.querySelectorAll('[data-act="demo"]').forEach(el => {
+      el.addEventListener('click', () => {
+        box.querySelector('.l-modal-note').textContent = '이 항목은 다음 업데이트에서 연결됩니다.';
+      });
+    });
+    box.querySelector('[data-act="close"]').addEventListener('click', hideModal);
+  });
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+</body>
+</html>

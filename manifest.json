@@ -1,0 +1,16 @@
+{
+  "name": "Einstein's Riddle ⚘",
+  "short_name": "Einstein's Riddle",
+  "description": "추론으로 정답을 찾는 논리 퍼즐. 3×3부터 10×10까지, 매번 새로 생성됩니다.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F4F5",
+  "theme_color": "#F4F4F5",
+  "lang": "ko",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Einstein's Riddle</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#F4F4F5">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    --bg:#F4F4F5; --surface:#FFFFFF; --ink:#1B1B1D; --sub:#6E6E73; --line:#D6D6D9; --accent:#2E2E31;
+    --accent-soft:#E2E2E4; --ok:#4B7A63; --bad:#8A4A44; --ok-tint:#DCEBE2; --bad-tint:#F1DEDA;
+    --divider-strong:#9C9CA0; --chip-bg:#E9E9EA;
+    --clue-size:13px; --chip-size:12.5px;
+    background: var(--bg); color: var(--ink); font-family: var(--font-main);
+    min-height: 100vh; padding: 88px 24px 100px; transition: background .2s, color .2s;
+  }
+  body { --font-main: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  body[data-font="serif"] { --font-main: "AppleMyungjo", "Noto Serif KR", ui-serif, Georgia, serif; }
+  body[data-font="sans"] { --font-main: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  body[data-mode="dark"] {
+    --bg:#161617; --surface:#1E1E20; --ink:#EDEDEE; --sub:#98989D; --line:#2B2B2D; --accent:#D8D8DA;
+    --accent-soft:#252527; --ok:#6FBF98; --bad:#C97A72; --ok-tint:#1E2E27; --bad-tint:#2E1F1D;
+    --divider-strong:#55555A; --chip-bg:#232325;
+  }
+  body[data-mode="navy"] {
+    --bg:#1B2430; --surface:#212B38; --ink:#E8ECF2; --sub:#8B96A8; --line:#2E3A4A; --accent:#C7D2E0;
+    --accent-soft:#26313F; --ok:#6FBF98; --bad:#E38A82; --ok-tint:#1F332C; --bad-tint:#332420;
+    --divider-strong:#465468; --chip-bg:#212C3A;
+  }
+  body[data-mode="cream"] {
+    --bg:#F3ECDD; --surface:#FBF6EA; --ink:#2E2A22; --sub:#7A7160; --line:#DCD2B8; --accent:#3A3428;
+    --accent-soft:#E8DFC6; --ok:#4B7A63; --bad:#8A4A44; --ok-tint:#DCE7D5; --bad-tint:#EEDAD1;
+    --divider-strong:#B9AD8C; --chip-bg:#EAE1CC;
+  }
+  body[data-textsize="1"] { --clue-size:14px; --chip-size:13.5px; }
+  body[data-textsize="2"] { --clue-size:15px; --chip-size:14.5px; }
+
+  .l-header-bar {
+    position: fixed; top:0; left:0; right:0; z-index:200;
+    background: var(--bg); border-bottom: 1px solid var(--divider-strong);
+  }
+  .l-header-inner {
+    max-width: 640px; margin: 0 auto; padding: 14px 24px;
+    display:flex; justify-content:space-between; align-items:center; gap: 10px;
+    font-size: 12px;
+  }
+  .l-title { font-weight: 700; color: var(--ink); font-size: 15.5px; }
+  .l-topbtns { display:flex; gap: 6px; flex-shrink: 0; }
+  .l-mini-btn {
+    border:1px solid var(--line); background:transparent; color: var(--ink);
+    display:inline-flex; align-items:center; justify-content:center;
+    padding: 4px; border-radius:4px; cursor:pointer; line-height:0;
+  }
+  .l-mini-btn.disabled { opacity: .35; cursor: default; pointer-events: none; }
+  .l-icon { width:15px; height:15px; display:block; }
+
+  .l-wrap { max-width: 640px; margin: 0 auto; position: relative; }
+  .l-loading { text-align:center; color: var(--sub); font-size: 13px; padding: 60px 0; }
+
+  .l-answer-block { margin-bottom: 32px; }
+  .l-mainquiz { text-align:center; font-weight:700; font-size:calc(var(--clue-size) + 1px); line-height:1.5; margin: 0 0 14px; }
+  .l-mainquiz-answer { display:flex; justify-content:center; margin-bottom: 22px; }
+  .l-board-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 8px 0; display:flex; justify-content:center; }
+  .l-board-wrap.overflowing { justify-content: flex-start; }
+  table.l-board { border-collapse: separate; border-spacing: 6px 5px; }
+  table.l-board th { font-size: 12px; color: var(--sub); font-weight:600; padding: 2px 6px; white-space: nowrap; text-align: center; }
+  table.l-board th.l-corner { min-width: 40px; }
+  table.l-board td { padding: 0; min-width: 60px; text-align: center; }
+
+  .l-board-footer { display:flex; justify-content:space-between; align-items:baseline; margin-top: 12px; flex-wrap:wrap; gap:8px; }
+  .l-hint-link, .l-confirm-link { font-size:13.5px; font-weight:600; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor:pointer; }
+  .l-hint-link.disabled { opacity: .4; cursor: default; pointer-events: none; text-decoration: none; }
+
+  .l-sentence-section { border-top: 1px solid var(--divider-strong); padding-top: 22px; }
+  .l-sentence-section h2 { font-size: 15.5px; font-weight: 700; letter-spacing: -0.005em; margin: 0 0 12px; }
+  .l-hint-timer-row { display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; flex-wrap:wrap; gap:8px; }
+  .l-hintbtn-line { display:flex; align-items:center; gap: 9px; }
+  .l-hint-dots { display:flex; align-items:center; gap: 4px; }
+  .l-hint-dot { width:8px; height:8px; border-radius:50%; border:1.5px solid var(--sub); background:transparent; }
+  .l-hint-dot.used { background: var(--ink); border-color: var(--ink); }
+  .l-timer-group { display:flex; align-items:center; gap: 6px; }
+  .l-timer { font-size: 14.5px; font-weight: 400; color: var(--ink); min-width: 42px; text-align:right; margin-right: 8px; }
+  .l-end-divider { border-top: 1px solid var(--divider-strong); }
+  .l-sentence-list { display:flex; flex-direction:column; }
+  .l-sentence {
+    font-size: var(--clue-size); line-height: 1.3; color: var(--ink); cursor: pointer;
+    padding: 7px 2px; border-bottom: 1px dotted var(--line);
+  }
+  .l-sentence:first-child { border-top: 1px dotted var(--line); }
+  .l-sentence.l-hint-line .l-mark { color: var(--sub); }
+  .l-num { font-weight: 700; color: var(--sub); margin-right: 8px; }
+  .l-sentence mark.l-mark {
+    background: transparent; color: inherit; border-radius:2px; padding: 1px 3px;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone; transition: background .15s;
+  }
+
+  .l-chip { position:relative; display:inline-block; }
+  .l-chip button.l-chip-btn {
+    border:1px solid var(--line); background: var(--chip-bg); color: var(--sub); font-family: var(--font-main); font-size:var(--chip-size);
+    padding:3px 7px; border-radius:6px; cursor:pointer; min-width:48px; font-weight: 400;
+  }
+  .l-chip button.l-chip-btn.filled { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); font-weight:400; }
+  .l-chip button.l-chip-btn.correct { background: var(--ok-tint); }
+  .l-chip button.l-chip-btn.incorrect { background: var(--bad-tint); }
+  .l-opts {
+    position: fixed; background: var(--surface); border:1px solid var(--line); border-radius:6px;
+    box-shadow:0 8px 20px rgba(0,0,0,.16); z-index:130; min-width:96px; max-height:240px; overflow-y:auto; font-family: var(--font-main);
+  }
+  .l-opts div { padding:7px 11px; font-size:12.5px; cursor:pointer; color: var(--ink); }
+  .l-opts div:hover { background: var(--accent-soft); }
+  .l-opts div.l-opt-clear { color: var(--sub); border-bottom: 1px solid var(--line); }
+
+  .l-modal-overlay {
+    position: fixed; inset: 0; background: rgba(20,20,22,.28); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    display:none; align-items:center; justify-content:center; z-index:250; padding: 20px;
+  }
+  .l-modal-overlay.show { display:flex; }
+  .l-modal {
+    background: var(--surface); color: var(--ink); border-radius:14px; padding:24px 22px; max-width:340px; width:100%;
+    box-shadow:0 24px 60px rgba(0,0,0,.3); font-family: var(--font-main);
+  }
+  .l-modal h3 { font-size:15px; font-weight:700; margin:0 0 14px; text-align:center; }
+  .l-modal-msg { font-size:13.5px; line-height:1.6; margin: 0 0 4px; text-align:center; }
+  .l-modal-msg-strong { font-size: 16px; font-weight: 700; }
+  .l-modal-actions { display:flex; justify-content:center; gap:48px; margin-top: 16px; }
+  .l-modal-action { font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:2px; cursor:pointer; color: var(--sub); }
+  .l-modal-action.primary { color: var(--ink); }
+  .l-setting-row { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .l-setting-row:last-of-type { border-bottom: none; }
+  .l-setting-row-flex { display:flex; justify-content:space-between; align-items:center; }
+  .l-font-pick { display:flex; gap:12px; }
+  .l-font-opt { font-size:12.5px; cursor:pointer; color: var(--sub); text-decoration: underline; text-underline-offset: 2px; }
+  .l-font-opt.active { color: var(--ink); font-weight:700; }
+  .l-modal-note { font-size:12px; color: var(--sub); margin-top: 8px; min-height: 16px; }
+  .l-modal-footnote { font-size:11.5px; color: var(--sub); text-align:center; line-height:1.5; margin: 10px 0 0; }
+  .l-record-list { max-height: 320px; overflow-y: auto; margin-top: 4px; }
+  .l-record-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .l-record-row:last-child { border-bottom:none; }
+  .l-record-date { color: var(--sub); min-width:72px; }
+  .l-record-size { color: var(--ink); min-width:36px; }
+  .l-record-hints { color: var(--sub); min-width:32px; }
+  .l-record-time { color: var(--ink); flex:1; text-align:right; }
+  .l-record-result { font-weight:700; min-width:32px; text-align:right; }
+  .l-record-result.correct { color: var(--ok); }
+  .l-record-result.incorrect { color: var(--bad); }
+  .l-slider-wrap { position: relative; margin-top: 10px; }
+  .l-slider { width: 100%; margin: 0; display:block; -webkit-appearance: none; appearance: none; height: 3px; background: var(--line); border-radius: 2px; outline: none; position:relative; z-index:1; }
+  .l-slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background: var(--ink); cursor:pointer; }
+  .l-slider::-moz-range-thumb { width:14px; height:14px; border-radius:50%; background: var(--ink); border:none; cursor:pointer; }
+  .l-slider-ticks { position:absolute; left:7px; right:7px; top:50%; height:8px; transform:translateY(-50%); display:flex; justify-content:space-between; pointer-events:none; z-index:0; }
+  .l-slider-ticks span { width:1px; height:8px; background: var(--sub); opacity:.5; }
+
+  .desc-box { max-width: 640px; margin-top: 26px; font-size: 12px; color: var(--sub); line-height: 1.7; }
+</style>
+</head>
+<body data-mode="light" data-font="sans" data-textsize="0">
+<script>
+  (function () {
+    var m = localStorage.getItem('epz_theme');
+    var f = localStorage.getItem('epz_font');
+    var t = localStorage.getItem('epz_textsize');
+    if (m) document.body.dataset.mode = m;
+    if (f) document.body.dataset.font = f;
+    if (t) document.body.dataset.textsize = t;
+  })();
+</script>
+
+<div class="l-header-bar">
+  <div class="l-header-inner">
+    <span class="l-title">Einstein's Riddle ⚘</span>
+    <span class="l-topbtns">
+      <button class="l-mini-btn" id="btn-record" title="기록"><svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></button>
+      <button class="l-mini-btn" id="btn-theme" title="테마"></button>
+      <button class="l-mini-btn" id="btn-settings" title="설정"><svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </span>
+  </div>
+</div>
+
+<div class="l-wrap" id="app">
+  <div class="l-loading" id="loading">퍼즐 생성 중…</div>
+</div>
+
+<div class="l-modal-overlay" id="modalOverlay"><div class="l-modal" id="modalBox"></div></div>
+
+<script>
+  // ======================================================================
+  // 한글 조사 helper (받침 유무 기준)
+  // ======================================================================
+  function hasBatchim(word) {
+    const ch = word[word.length - 1];
+    const code = ch.charCodeAt(0);
+    if (code < 0xAC00 || code > 0xD7A3) return false;
+    return (code - 0xAC00) % 28 !== 0;
+  }
+  function eunNeun(word) { return hasBatchim(word) ? '은' : '는'; }
+  function iGa(word) { return hasBatchim(word) ? '이' : '가'; }
+  function eulReul(word) { return hasBatchim(word) ? '을' : '를'; }
+  function iDa(word) { return hasBatchim(word) ? '이다' : '다'; }
+  function waGwa(word) { return hasBatchim(word) ? '과' : '와'; }
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ======================================================================
+  // 카테고리 풀. 색깔은 정답표에 노출되지 않는 숨겨진 기준 항목(모든 집이
+  // 벽지 색깔로 구분된다는 설정만 있고, 색깔↔집 번호 매칭은 사용자가 단서를
+  // 통해 직접 추론). 국적은 항상 포함되는 첫 번째 항목.
+  // ======================================================================
+  const COLOR_VALUES = ['빨간색','파란색','초록색','노란색','하늘색','보라색','분홍색','흰색','검은색','주황색'];
+  const CATEGORY_POOL = [
+    ['국적', ['한국','중국','인도','태국','이집트','케냐','브라질','멕시코','호주','터키']],
+    ['동물', ['개','고양이','새','물고기','말','토끼','거북이','햄스터','앵무새','다람쥐']],
+    ['음료', ['위스키','커피','차','우유','맥주','와인','주스','코코아','생수','탄산수']],
+    ['담배', ['팰맬','던힐','블렌드','다비도프','프린스','말보로','카멜','카프리','세일럼','켄트']],
+    ['과일', ['사과','바나나','포도','딸기','오렌지','수박','복숭아','키위','망고','체리']],
+    ['직업', ['의사','교사','요리사','화가','음악가','농부','경찰','소방관','작가','엔지니어']],
+    ['취미', ['독서','낚시','등산','요리','그림','춤','여행','사진','원예','체스']],
+    ['잡지', ['옵서버','헤럴드','타임즈','포스트','저널','위클리','모닝뉴스','글로브','트리뷴','크로니클']],
+    ['자동차', ['세단','SUV','트럭','쿠페','밴','스포츠카','해치백','컨버터블','왜건','미니밴']],
+    ['꽃', ['장미','튤립','백합','해바라기','국화','카네이션','수국','라벤더','데이지','난초']],
+    ['스포츠', ['축구','농구','야구','테니스','수영','골프','배구','탁구','배드민턴','요가']],
+  ];
+  // NOUN: "~하는 사람"류 명사구(주어·인접 서술에 사용). ACTION: "~한다"류 서술어(같은 집 서술에 사용).
+  const NOUN = {
+    '국적': v => `${v}인`,
+    '동물': v => `${v}${eulReul(v)} 기르는 사람`,
+    '음료': v => `${v}${eulReul(v)} 마시는 사람`,
+    '담배': v => `${v} 담배를 피우는 사람`,
+    '과일': v => `${v}${eulReul(v)} 좋아하는 사람`,
+    '직업': v => v,
+    '취미': v => `${v}${eulReul(v)} 즐기는 사람`,
+    '잡지': v => `${v}${eulReul(v)} 구독하는 사람`,
+    '자동차': v => `${v}${eulReul(v)} 타는 사람`,
+    '꽃': v => `${v}${eulReul(v)} 좋아하는 사람`,
+    '스포츠': v => `${v}${eulReul(v)} 즐기는 사람`,
+  };
+  const ACTION = {
+    '국적': v => `${v}인이다`,
+    '동물': v => `${v}${eulReul(v)} 기른다`,
+    '음료': v => `${v}${eulReul(v)} 마신다`,
+    '담배': v => `${v} 담배를 피운다`,
+    '과일': v => `${v}${eulReul(v)} 좋아한다`,
+    '직업': v => `${v}${iDa(v)}`,
+    '취미': v => `${v}${eulReul(v)} 즐긴다`,
+    '잡지': v => `${v}${eulReul(v)} 구독한다`,
+    '자동차': v => `${v}${eulReul(v)} 탄다`,
+    '꽃': v => `${v}${eulReul(v)} 좋아한다`,
+    '스포츠': v => `${v}${eulReul(v)} 즐긴다`,
+  };
+  function COLOR_ACTION(v) { return `${v} 집에 산다`; }
+  function COLOR_BARE(v) { return `${v} 집`; }
+  function COLOR_SUBJECT_LONG(v) { return `${v} 집에 사는 사람`; }
+  function COLOR_SUBJECT_SHORT(v) { return `${v} 집 사람`; }
+  // NOUN[cat](val)을 문장 주어로 쓸 때 붙는 은/는을, 실제로 만들어진 명사구의 마지막 글자
+  // 받침 기준으로 동적으로 계산한다("직업"처럼 "~하는 사람" 수식이 없는 경우도 정확히 처리).
+  function subjectForm(cat, val) {
+    const noun = NOUN[cat](val);
+    return `${noun}${eunNeun(noun)}`;
+  }
+
+  const ORDINAL_WORDS = ['첫','두','세','네','다섯','여섯','일곱','여덟','아홉','열'];
+  function ordinalPhrase(h, numHouses) {
+    const mid = (numHouses - 1) / 2;
+    if (numHouses % 2 === 1 && h === mid) {
+      return { subject: '한가운데 사는 사람', action: '한가운데 산다' };
+    }
+    const word = ORDINAL_WORDS[h] || `${h + 1}`;
+    return { subject: `${word} 번째 집에 사는 사람`, action: `${word} 번째 집에 산다` };
+  }
+
+  // ======================================================================
+  // 실제 CSP 솔버 (집 단위로 한 칸씩 배정, 백트래킹 + 조기 가지치기)
+  // ======================================================================
+  function trySolve(chosenCats, valuePools, numHouses, sameClues, adjClues, unorderedAdjClues, betweenClues, directClues, limit, deadline) {
+    const remaining = {};
+    chosenCats.forEach(c => remaining[c] = new Set(valuePools[c]));
+    const placedHouse = {};
+    chosenCats.forEach(c => placedHouse[c] = {});
+    let solCount = 0;
+    let steps = 0;
+    const STEP_CAP = 60000;
+
+    // 같은 집 제약을 카테고리별로 색인화 — 두 속성이 모두 배정된 즉시 검사할 수 있게 한다.
+    const sameIdx = {};
+    chosenCats.forEach(c => sameIdx[c] = []);
+    sameClues.forEach(cl => {
+      sameIdx[cl.catA].push({ valThis: cl.valA, other: cl.catB, valOther: cl.valB });
+      sameIdx[cl.catB].push({ valThis: cl.valB, other: cl.catA, valOther: cl.valA });
+    });
+    const directIdx = {};
+    directClues.forEach(d => { directIdx[`${d.cat}|${d.house}`] = d.val; });
+
+    function violatesSame(cat, val, houseAssign) {
+      const entries = sameIdx[cat];
+      for (let i = 0; i < entries.length; i++) {
+        const e = entries[i];
+        if (e.valThis !== val) continue;
+        const otherVal = houseAssign[e.other];
+        if (otherVal === undefined) continue;
+        if (otherVal !== e.valOther) return true;
+      }
+      return false;
+    }
+    function checkAdjacency(h, houseAssign) {
+      for (const cl of adjClues) {
+        if (houseAssign[cl.cat] === cl.valRight) {
+          const lh = placedHouse[cl.cat][cl.valLeft];
+          if (lh === undefined || lh !== h - 1) return false;
+        }
+      }
+      return true;
+    }
+    function checkUnordered() {
+      for (const cl of unorderedAdjClues) {
+        const ha = placedHouse[cl.catA][cl.valA];
+        const hb = placedHouse[cl.catB][cl.valB];
+        if (ha === undefined || hb === undefined || Math.abs(ha - hb) !== 1) return false;
+      }
+      for (const cl of betweenClues) {
+        const ha = placedHouse[cl.catA][cl.valA];
+        const hb = placedHouse[cl.catB][cl.valB];
+        const hc = placedHouse[cl.catC][cl.valC];
+        if (ha === undefined || hb === undefined || hc === undefined) return false;
+        const lo = Math.min(ha, hb), hi = Math.max(ha, hb);
+        if (!(lo < hc && hc < hi)) return false;
+      }
+      return true;
+    }
+
+    function backtrack(h, catIdx, houseAssign) {
+      if (solCount >= limit || steps > STEP_CAP) return;
+      steps++;
+      if ((steps & 511) === 0 && deadline && performance.now() > deadline) { steps = STEP_CAP + 1; return; }
+      if (catIdx === chosenCats.length) {
+        chosenCats.forEach(c => { placedHouse[c][houseAssign[c]] = h; });
+        if (!checkAdjacency(h, houseAssign)) {
+          chosenCats.forEach(c => { delete placedHouse[c][houseAssign[c]]; });
+          return;
+        }
+        if (h === numHouses - 1) {
+          if (checkUnordered()) solCount++;
+          chosenCats.forEach(c => { delete placedHouse[c][houseAssign[c]]; });
+          return;
+        }
+        backtrack(h + 1, 0, {});
+        chosenCats.forEach(c => { delete placedHouse[c][houseAssign[c]]; });
+        return;
+      }
+      const cat = chosenCats[catIdx];
+      const directVal = directIdx[`${cat}|${h}`];
+      const candidates = directVal !== undefined ? [directVal] : Array.from(remaining[cat]);
+      for (const val of candidates) {
+        if (!remaining[cat].has(val)) continue;
+        if (solCount >= limit || steps > STEP_CAP) return;
+        if (violatesSame(cat, val, houseAssign)) continue;
+        remaining[cat].delete(val);
+        houseAssign[cat] = val;
+        backtrack(h, catIdx + 1, houseAssign);
+        delete houseAssign[cat];
+        remaining[cat].add(val);
+      }
+    }
+    backtrack(0, 0, {});
+    return steps > STEP_CAP && solCount < limit ? -1 : solCount;
+  }
+
+  // ======================================================================
+  // 퍼즐 생성기: 랜덤 정답 → 후보 단서 풀(고전 제브라 퍼즐 스타일 문장) →
+  // 유일해 보장 → 단서 15~20개로 축소 → 메인 퀴즈 선정
+  // ======================================================================
+  function directText(cat, house, val, numHouses) {
+    const ord = ordinalPhrase(house, numHouses);
+    if (cat === '색깔') {
+      return Math.random() < 0.5
+        ? `${COLOR_BARE(val)}은 ${ord.action}.`
+        : `${ord.subject}은 ${COLOR_ACTION(val)}.`;
+    }
+    return Math.random() < 0.5
+      ? `${subjectForm(cat, val)} ${ord.action}.`
+      : `${ord.subject}은 ${ACTION[cat](val)}.`;
+  }
+
+  function generatePuzzle(numCategories, numHouses) {
+    numCategories = Math.max(3, Math.min(10, numCategories || 4));
+    numHouses = Math.max(3, Math.min(10, numHouses || 4));
+
+    const chosenDefs = CATEGORY_POOL.slice(0, numCategories); // 국적이 항상 첫 항목으로 포함
+    const visibleCats = chosenDefs.map(c => c[0]);
+    const regularCats = visibleCats.filter(c => c !== '국적');
+    const chosenCats = ['색깔', ...visibleCats]; // 솔버 기준(색깔은 숨겨진 항목으로 항상 포함)
+
+    const valuePools = { '색깔': shuffle(COLOR_VALUES).slice(0, numHouses) };
+    const solution = { '색깔': shuffle(valuePools['색깔']) };
+    chosenDefs.forEach(([name, pool]) => {
+      const vals = shuffle(pool).slice(0, numHouses);
+      valuePools[name] = vals;
+      solution[name] = shuffle(vals);
+    });
+
+    // ---- 메인 퀴즈 조건 선정: 이 (카테고리,값)은 어떤 단서에도 직접 등장시키지 않는다 ----
+    const conditionCat = regularCats[Math.floor(Math.random() * regularCats.length)];
+    const quizHouse = Math.floor(Math.random() * numHouses);
+    const conditionVal = solution[conditionCat][quizHouse];
+    const mainAnswer = solution['국적'][quizHouse];
+    const mentionsExcluded = (cat, val) => cat === conditionCat && val === conditionVal;
+
+    // ---- 후보 단서 풀 ----
+    const sameClues = [];       // {catA,valA,catB,valB,text}
+    const adjClues = [];        // 순서 있는 인접(색깔-색깔 전용): {cat,valLeft,valRight,text}
+    const unorderedAdj = [];    // 순서 없는 인접: {catA,valA,catB,valB,text}
+
+    // 1) 국적 - 일반 카테고리 (같은 집)
+    regularCats.forEach(cat => {
+      for (let h = 0; h < numHouses; h++) {
+        const nation = solution['국적'][h], val = solution[cat][h];
+        if (mentionsExcluded(cat, val)) continue;
+        sameClues.push({ catA: '국적', valA: nation, catB: cat, valB: val,
+          text: `${subjectForm('국적', nation)} ${ACTION[cat](val)}.` });
+      }
+    });
+    // 2) 국적 - 색깔 (같은 집)
+    for (let h = 0; h < numHouses; h++) {
+      const nation = solution['국적'][h], color = solution['색깔'][h];
+      sameClues.push({ catA: '국적', valA: nation, catB: '색깔', valB: color,
+        text: `${subjectForm('국적', nation)} ${COLOR_ACTION(color)}.` });
+    }
+    // 3) 색깔 - 일반 카테고리 (같은 집)
+    regularCats.forEach(cat => {
+      for (let h = 0; h < numHouses; h++) {
+        const color = solution['색깔'][h], val = solution[cat][h];
+        if (mentionsExcluded(cat, val)) continue;
+        const subj = Math.random() < 0.5 ? COLOR_SUBJECT_LONG(color) : COLOR_SUBJECT_SHORT(color);
+        sameClues.push({ catA: '색깔', valA: color, catB: cat, valB: val,
+          text: `${subj}은 ${ACTION[cat](val)}.` });
+      }
+    });
+    // 4) 일반 - 일반 (같은 집)
+    for (let i = 0; i < regularCats.length; i++) {
+      for (let j = i + 1; j < regularCats.length; j++) {
+        const swap = Math.random() < 0.5;
+        const c1 = swap ? regularCats[j] : regularCats[i];
+        const c2 = swap ? regularCats[i] : regularCats[j];
+        for (let h = 0; h < numHouses; h++) {
+          const v1 = solution[c1][h], v2 = solution[c2][h];
+          if (mentionsExcluded(c1, v1) || mentionsExcluded(c2, v2)) continue;
+          sameClues.push({ catA: c1, valA: v1, catB: c2, valB: v2,
+            text: `${subjectForm(c1, v1)} ${ACTION[c2](v2)}.` });
+        }
+      }
+    }
+    // 5) 색깔 - 색깔 순서 인접 ("바로 왼쪽에 있다")
+    for (let h = 0; h < numHouses - 1; h++) {
+      const cl = solution['색깔'][h], cr = solution['색깔'][h + 1];
+      adjClues.push({ cat: '색깔', valLeft: cl, valRight: cr,
+        text: `${COLOR_BARE(cl)}은 ${COLOR_BARE(cr)}의 바로 왼쪽에 있다.` });
+    }
+    // 6) (국적|일반) - 색깔 순서 없는 인접 ("~집 옆에 산다")
+    [...regularCats, '국적'].forEach(cat => {
+      for (let h = 0; h < numHouses; h++) {
+        const neighbors = [h - 1, h + 1].filter(x => x >= 0 && x < numHouses);
+        if (!neighbors.length) continue;
+        const nh = neighbors[Math.floor(Math.random() * neighbors.length)];
+        const val = solution[cat][h], color = solution['색깔'][nh];
+        if (mentionsExcluded(cat, val)) continue;
+        unorderedAdj.push({ catA: cat, valA: val, catB: '색깔', valB: color,
+          text: `${subjectForm(cat, val)} ${color} 집 옆에 산다.` });
+      }
+    });
+    // 7) 일반 - 일반 순서 없는 인접 ("~의 옆집에 산다" / "~과 이웃이다")
+    for (let i = 0; i < regularCats.length; i++) {
+      for (let j = i + 1; j < regularCats.length; j++) {
+        const c1 = regularCats[i], c2 = regularCats[j];
+        for (let h = 0; h < numHouses; h++) {
+          const neighbors = [h - 1, h + 1].filter(x => x >= 0 && x < numHouses);
+          if (!neighbors.length) continue;
+          const nh = neighbors[Math.floor(Math.random() * neighbors.length)];
+          const v1 = solution[c1][h], v2 = solution[c2][nh];
+          if (mentionsExcluded(c1, v1) || mentionsExcluded(c2, v2)) continue;
+          const noun2 = NOUN[c2](v2);
+          const text = Math.random() < 0.5
+            ? `${subjectForm(c1, v1)} ${noun2}의 옆집에 산다.`
+            : `${subjectForm(c1, v1)} ${noun2}${waGwa(noun2)} 이웃이다.`;
+          unorderedAdj.push({ catA: c1, valA: v1, catB: c2, valB: v2, text });
+        }
+      }
+    }
+    // 8) 절대 위치(서수) 플레이버 단서 — 직접형 비율을 살짝 늘리기 위해 그리드 크기에 비례한 개수
+    const flavorDirect = [];
+    const flavorCount = Math.max(3, Math.ceil(numHouses * 0.5));
+    const posHouses = shuffle(Array.from({ length: numHouses }, (_, i) => i)).slice(0, flavorCount);
+    posHouses.forEach(h => {
+      const candCats = [...regularCats, '국적', '색깔'];
+      const cat = candCats[Math.floor(Math.random() * candCats.length)];
+      const val = solution[cat][h];
+      if (mentionsExcluded(cat, val)) return;
+      flavorDirect.push({ cat, house: h, val, text: directText(cat, h, val, numHouses) });
+    });
+
+    // 9) "~는 누구와 누구 사이에 산다" 형 관계형 단서 (between). 색깔은 제외, 국적·일반 카테고리만 대상.
+    const betweenPool = ['국적', ...regularCats];
+    const betweenClues = [];
+    if (numHouses >= 3) {
+      for (let h1 = 0; h1 < numHouses; h1++) {
+        for (let h2 = h1 + 2; h2 < numHouses; h2++) {
+          for (let h3 = h1 + 1; h3 < h2; h3++) {
+            const catA = betweenPool[Math.floor(Math.random() * betweenPool.length)];
+            const catB = betweenPool[Math.floor(Math.random() * betweenPool.length)];
+            const catC = betweenPool[Math.floor(Math.random() * betweenPool.length)];
+            const valA = solution[catA][h1], valB = solution[catB][h2], valC = solution[catC][h3];
+            if (mentionsExcluded(catA, valA) || mentionsExcluded(catB, valB) || mentionsExcluded(catC, valC)) continue;
+            const subjA = NOUN[catA](valA);
+            const nounC = NOUN[catC](valC);
+            betweenClues.push({ catA, valA, catB, valB, catC, valC,
+              text: `${nounC}${eunNeun(nounC)} ${subjA}${waGwa(subjA)} ${NOUN[catB](valB)} 사이에 산다.` });
+          }
+        }
+      }
+    }
+
+    let activeSame = sameClues.slice();
+    let activeAdj = adjClues.slice();
+    let activeUnordered = unorderedAdj.slice();
+    let activeBetween = betweenClues.slice();
+    let activeDirect = flavorDirect.slice();
+    const requiredDirect = [];
+    const genDeadline = performance.now() + 4000;
+
+    function isUnique() {
+      const perCallDeadline = performance.now() + 250;
+      const allDirect = requiredDirect.concat(activeDirect);
+      return trySolve(chosenCats, valuePools, numHouses, activeSame, activeAdj, activeUnordered, activeBetween, allDirect, 2, perCallDeadline) === 1;
+    }
+
+    if (!isUnique()) {
+      const buildCells = (allowExcluded) => {
+        const cells = [];
+        chosenCats.forEach(cat => {
+          for (let h = 0; h < numHouses; h++) {
+            const val = solution[cat][h];
+            if (!allowExcluded && mentionsExcluded(cat, val)) continue;
+            cells.push({ cat, house: h, val });
+          }
+        });
+        return shuffle(cells);
+      };
+      for (const cell of buildCells(false)) {
+        if (isUnique() || performance.now() > genDeadline) break;
+        requiredDirect.push({ ...cell, text: directText(cell.cat, cell.house, cell.val, numHouses) });
+      }
+      if (!isUnique() && performance.now() <= genDeadline) {
+        for (const cell of buildCells(true)) {
+          if (isUnique() || performance.now() > genDeadline) break;
+          if (!requiredDirect.some(c => c.cat === cell.cat && c.house === cell.house)) {
+            requiredDirect.push({ ...cell, text: directText(cell.cat, cell.house, cell.val, numHouses) });
+          }
+        }
+      }
+    }
+
+    // ---- 단서 10~20개 목표로 그리디 축소 (유일해 유지가 최우선, 큰 그리드는 초과 가능) ----
+    const targetCount = 10 + Math.floor(Math.random() * 11);
+    function arrFor(kind) {
+      if (kind === 'same') return activeSame;
+      if (kind === 'adj') return activeAdj;
+      if (kind === 'unordered') return activeUnordered;
+      if (kind === 'between') return activeBetween;
+      return activeDirect;
+    }
+    // 한 번의 셔플-제거 패스는 순서에 따라 로컬 최적점(불필요하게 많은 단서)에 갇힐 수 있어,
+    // 더 이상 제거되는 것이 없거나 목표치·시간 제한에 도달할 때까지 여러 패스를 반복한다.
+    let removedAny = true;
+    while (removedAny && performance.now() <= genDeadline) {
+      const total = activeSame.length + activeAdj.length + activeUnordered.length + activeBetween.length + activeDirect.length + requiredDirect.length;
+      if (total <= targetCount) break;
+      removedAny = false;
+      const removalOrder = shuffle([
+        ...activeSame.map(c => ({ kind: 'same', clue: c })),
+        ...activeAdj.map(c => ({ kind: 'adj', clue: c })),
+        ...activeUnordered.map(c => ({ kind: 'unordered', clue: c })),
+        ...activeBetween.map(c => ({ kind: 'between', clue: c })),
+        ...activeDirect.map(c => ({ kind: 'direct', clue: c })),
+      ]);
+      for (const item of removalOrder) {
+        const curTotal = activeSame.length + activeAdj.length + activeUnordered.length + activeBetween.length + activeDirect.length + requiredDirect.length;
+        if (curTotal <= targetCount) break;
+        if (performance.now() > genDeadline) break;
+        const arr = arrFor(item.kind);
+        const idx = arr.indexOf(item.clue);
+        if (idx === -1) continue;
+        arr.splice(idx, 1);
+        if (!isUnique()) { arr.splice(idx, 0, item.clue); continue; }
+        removedAny = true;
+      }
+    }
+
+    const rows = Array.from({ length: numHouses }, (_, i) => `${i + 1}번 집`);
+    const clueSentences = shuffle([
+      ...activeSame.map(c => c.text),
+      ...activeAdj.map(c => c.text),
+      ...activeUnordered.map(c => c.text),
+      ...activeBetween.map(c => c.text),
+      ...activeDirect.map(c => c.text),
+      ...requiredDirect.map(c => c.text),
+    ]);
+
+    const visibleCategories = {};
+    visibleCats.forEach(name => { visibleCategories[name] = valuePools[name]; });
+
+    return {
+      categories: visibleCategories, rows, solution, clueSentences,
+      mainQuiz: {
+        conditionCat, conditionVal, correctAnswer: mainAnswer,
+        headline: `${subjectForm(conditionCat, conditionVal)} 어느 나라 사람일까?`,
+      },
+    };
+  }
+
+  // ======================================================================
+  // 헤더 버튼 (테마/기록/설정) — 퍼즐 생성과 무관하게 즉시 동작
+  // ======================================================================
+  const icons = {
+    theme: {
+      light: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
+      navy: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 16a3 3 0 0 1 0 6H7a5 5 0 1 1 4.9-6z"/><path d="M18.376 14.512a6 6 0 0 0 3.461-4.127c.148-.625-.659-.97-1.248-.714a4 4 0 0 1-5.259-5.26c.255-.589-.09-1.395-.716-1.248a6 6 0 0 0-4.594 5.36"/></svg>',
+      dark: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>',
+      cream: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/></svg>',
+    },
+    pause: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>',
+    play: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>',
+  };
+
+  const modeSeq = ['light', 'navy', 'dark', 'cream'];
+  let mode = document.body.dataset.mode || 'light';
+  let font = document.body.dataset.font || 'sans';
+  let textsize = document.body.dataset.textsize || '0';
+  document.getElementById('btn-theme').innerHTML = icons.theme[mode];
+
+  function persist() {
+    localStorage.setItem('epz_theme', mode);
+    localStorage.setItem('epz_font', font);
+    localStorage.setItem('epz_textsize', textsize);
+  }
+
+  document.getElementById('btn-theme').addEventListener('click', () => {
+    mode = modeSeq[(modeSeq.indexOf(mode) + 1) % modeSeq.length];
+    document.body.dataset.mode = mode;
+    document.getElementById('btn-theme').innerHTML = icons.theme[mode];
+    persist();
+  });
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  function showModal(html) { box.innerHTML = html; overlay.classList.add('show'); }
+  function hideModal() { overlay.classList.remove('show'); }
+  overlay.addEventListener('click', e => { if (e.target === overlay) hideModal(); });
+
+  document.getElementById('btn-record').addEventListener('click', () => {
+    let records = [];
+    try { records = JSON.parse(localStorage.getItem('epz_records') || '[]'); } catch (e) {}
+    let body;
+    if (!records.length) {
+      body = '<p class="l-modal-msg">아직 기록이 없어요.</p><p class="l-modal-msg">도전 모드에서 정답 확인을 누르면 기록됩니다.</p>';
+    } else {
+      body = '<div class="l-record-list">' + records.map(r => {
+        const d = new Date(r.ts);
+        const dateStr = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        const m = Math.floor(r.elapsed / 60), s = r.elapsed % 60;
+        const timeStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        const hintStr = r.hints !== undefined ? `힌트${r.hints}` : '';
+        return `<div class="l-record-row"><span class="l-record-date">${dateStr}</span><span class="l-record-size">${r.rows}×${r.cols}</span><span class="l-record-hints">${hintStr}</span><span class="l-record-time">${timeStr}</span><span class="l-record-result ${r.correct ? 'correct' : 'incorrect'}">${r.correct ? '정답' : '오답'}</span></div>`;
+      }).join('') + '</div>';
+    }
+    showModal(
+      '<h3>기록</h3>' + body +
+      '<div class="l-modal-actions"><span class="l-modal-action primary" data-act="close">닫기</span></div>'
+    );
+    box.querySelector('[data-act="close"]').addEventListener('click', hideModal);
+  });
+
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    showModal(
+      '<h3>설정</h3>' +
+      '<div class="l-setting-row l-setting-row-flex"><span>글꼴 바꾸기</span><span class="l-font-pick">' +
+      `<span class="l-font-opt ${font === 'sans' ? 'active' : ''}" data-f="sans">산세리프</span>` +
+      `<span class="l-font-opt ${font === 'serif' ? 'active' : ''}" data-f="serif">세리프</span>` +
+      '</span></div>' +
+      '<div class="l-setting-row"><span>글자 크기</span>' +
+      '<div class="l-slider-wrap">' +
+      `<input type="range" class="l-slider" id="textsize-slider" min="0" max="2" step="1" value="${textsize}">` +
+      '<div class="l-slider-ticks"><span></span><span></span><span></span></div>' +
+      '</div>' +
+      '</div>' +
+      '<div class="l-setting-row l-setting-row-flex"><span>언어 설정</span><span class="l-modal-action" data-act="demo">한국어 ▾</span></div>' +
+      '<div class="l-setting-row l-setting-row-flex"><span>음향 설정</span><span class="l-modal-action" data-act="demo">켜짐 ▾</span></div>' +
+      '<p class="l-modal-note"></p>' +
+      '<div class="l-modal-actions"><span class="l-modal-action primary" data-act="close">닫기</span></div>'
+    );
+    box.querySelectorAll('.l-font-opt').forEach(el => {
+      el.addEventListener('click', () => {
+        font = el.dataset.f;
+        document.body.dataset.font = font;
+        box.querySelectorAll('.l-font-opt').forEach(o => o.classList.toggle('active', o === el));
+        persist();
+      });
+    });
+    box.querySelector('#textsize-slider').addEventListener('input', (e) => {
+      textsize = e.target.value;
+      document.body.dataset.textsize = textsize;
+      persist();
+    });
+    box.querySelectorAll('[data-act="demo"]').forEach(el => {
+      el.addEventListener('click', () => {
+        box.querySelector('.l-modal-note').textContent = '이 항목은 다음 업데이트에서 연결됩니다.';
+      });
+    });
+    box.querySelector('[data-act="close"]').addEventListener('click', hideModal);
+  });
+
+  // ======================================================================
+  // 퍼즐 생성 + 게임판 렌더 — 큰 그리드는 생성에 수 초 걸릴 수 있어
+  // 로딩 문구가 먼저 화면에 그려지도록 두 번의 requestAnimationFrame 뒤에 실행한다.
+  // ======================================================================
+  const urlParams = new URLSearchParams(location.search);
+  const isPractice = urlParams.get('mode') === 'practice';
+  const numCategories = parseInt(urlParams.get('rows'), 10) || 4;
+  const numHouses = parseInt(urlParams.get('cols'), 10) || 4;
+
+  requestAnimationFrame(() => requestAnimationFrame(init));
+
+  function init() {
+  const puzzle = generatePuzzle(numCategories, numHouses);
+  const categories = puzzle.categories;
+  const rows = puzzle.rows;
+  const solution = puzzle.solution;
+  const clueSentences = puzzle.clueSentences;
+  const answers = {};
+  let isGraded = false;
+
+  document.getElementById('app').innerHTML = `
+    <div class="l-answer-block">
+      <p class="l-mainquiz" id="mainquiz-text"></p>
+      <div class="l-mainquiz-answer" id="mainquiz-answer"></div>
+      <div id="rows"></div>
+      <div class="l-board-footer">
+        <span class="l-hint-link" id="btn-restart">초기화</span>
+        <span class="l-confirm-link" id="btn-confirm">정답 확인</span>
+      </div>
+    </div>
+
+    <div class="l-sentence-section">
+      <h2>단서</h2>
+      <div class="l-hint-timer-row">
+        <span class="l-hintbtn-line">
+          <span class="l-hint-link" id="btn-hint">힌트 보기</span>
+          <span class="l-hint-dots" id="hintdots">
+            <span class="l-hint-dot"></span><span class="l-hint-dot"></span><span class="l-hint-dot"></span>
+          </span>
+        </span>
+        <div class="l-timer-group" id="timer-group">
+          <span class="l-timer" id="timer">00:00</span>
+          <button class="l-mini-btn" id="btn-pause" title="일시정지"></button>
+          <button class="l-mini-btn" id="btn-reset" title="시간 초기화"><svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+        </div>
+      </div>
+      <div class="l-sentence-list" id="sentences"></div>
+      <div class="l-end-divider"></div>
+    </div>
+
+    <div class="desc-box">
+      이 화면은 실제 규칙 기반 로직으로 매번 새로 생성됩니다(백트래킹으로 유일해를 보장). 메인 퀴즈와 정답표
+      모두 생성된 정답을 기준으로 실제 계산됩니다. 테마·폰트·글자 크기 설정은 브라우저에 저장되어 랜딩
+      페이지에도 그대로 적용됩니다.
+    </div>
+  `;
+
+  // ---- 메인 퀴즈 ----
+  // 값 텍스트가 길어도 줄바꿈 없이 한 줄에 담기도록 글자 크기를 줄여서 맞춘다.
+  function fitChipText(btn) {
+    const maxWidth = 82;
+    btn.style.whiteSpace = 'nowrap';
+    btn.style.fontSize = '';
+    let fs = parseFloat(getComputedStyle(btn).fontSize);
+    const minFs = 9;
+    while (btn.scrollWidth > maxWidth && fs > minFs) {
+      fs -= 0.5;
+      btn.style.fontSize = fs + 'px';
+    }
+  }
+
+  function renderMainQuiz() {
+    document.getElementById('mainquiz-text').textContent = puzzle.mainQuiz.headline;
+    const wrap = document.getElementById('mainquiz-answer');
+    const cur = answers['mainquiz'] || '';
+    let cls = 'l-chip-btn' + (cur ? ' filled' : '');
+    if (isGraded && cur) cls += (cur === puzzle.mainQuiz.correctAnswer) ? ' correct' : ' incorrect';
+    wrap.innerHTML = `<div class="l-chip"><button class="${cls}" data-key="mainquiz">${cur || '—'}</button></div>`;
+    const mqBtn = wrap.querySelector('.l-chip-btn');
+    fitChipText(mqBtn);
+    mqBtn.addEventListener('click', ev => {
+      ev.stopPropagation();
+      openOpts(ev.target, 'mainquiz', categories['국적']);
+    });
+  }
+
+  // ---- 답안 표 ----
+  function renderBoard() {
+    const wrap = document.getElementById('rows');
+    let html = '<div class="l-board-wrap" id="boardWrap"><table class="l-board"><tr><th class="l-corner"></th>' +
+      rows.map(r => `<th>${r}</th>`).join('') + '</tr>';
+    Object.entries(categories).forEach(([cat, opts]) => {
+      html += `<tr><th style="text-align:left;">${cat}</th>`;
+      rows.forEach((r, ri) => {
+        const key = `${ri}-${cat}`;
+        const cur = answers[key] || '';
+        let cls = 'l-chip-btn' + (cur ? ' filled' : '');
+        if (isGraded && cur) cls += (cur === solution[cat][ri]) ? ' correct' : ' incorrect';
+        html += `<td><div class="l-chip"><button class="${cls}" data-key="${key}" data-cat="${cat}">${cur || '—'}</button></div></td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</table></div>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('.l-chip-btn').forEach(btn => {
+      fitChipText(btn);
+      btn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        openOpts(btn, btn.dataset.key, categories[btn.dataset.cat]);
+      });
+    });
+    const bw = document.getElementById('boardWrap');
+    requestAnimationFrame(() => { bw.classList.toggle('overflowing', bw.scrollWidth > bw.clientWidth + 1); });
+  }
+  window.addEventListener('resize', () => {
+    const bw = document.getElementById('boardWrap');
+    if (bw) bw.classList.toggle('overflowing', bw.scrollWidth > bw.clientWidth + 1);
+  });
+  function closeOpts() { document.querySelectorAll('.l-opts').forEach(o => o.remove()); }
+  function openOpts(btn, key, opts) {
+    closeOpts();
+    const r = btn.getBoundingClientRect();
+    const list = document.createElement('div'); list.className = 'l-opts';
+    const clear = document.createElement('div'); clear.className = 'l-opt-clear'; clear.textContent = 'ー';
+    clear.addEventListener('click', ev => { ev.stopPropagation(); delete answers[key]; isGraded = false; closeOpts(); renderBoard(); renderMainQuiz(); });
+    list.appendChild(clear);
+    opts.forEach(o => {
+      const d = document.createElement('div'); d.textContent = o;
+      d.addEventListener('click', ev => { ev.stopPropagation(); answers[key] = o; isGraded = false; closeOpts(); renderBoard(); renderMainQuiz(); });
+      list.appendChild(d);
+    });
+    document.body.appendChild(list);
+    list.style.top = (r.bottom + 4) + 'px';
+    list.style.left = r.left + 'px';
+  }
+  document.addEventListener('click', e => { if (!e.target.closest('.l-chip-btn') && !e.target.closest('.l-opts')) closeOpts(); });
+  window.addEventListener('scroll', closeOpts, true);
+
+  function allFilled() {
+    const total = rows.length * Object.keys(categories).length + 1;
+    return total === Object.values(answers).filter(Boolean).length;
+  }
+  function isCorrect() {
+    const boardOk = Object.keys(categories).every(cat =>
+      rows.every((r, ri) => answers[`${ri}-${cat}`] === solution[cat][ri])
+    );
+    return boardOk && answers['mainquiz'] === puzzle.mainQuiz.correctAnswer;
+  }
+
+  function recordAttempt() {
+    if (isPractice) return;
+    try {
+      const key = 'epz_records';
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      arr.unshift({ ts: Date.now(), rows: Object.keys(categories).length, cols: rows.length, elapsed, correct: isCorrect(), hints: hintLines.length });
+      localStorage.setItem(key, JSON.stringify(arr.slice(0, 50)));
+    } catch (e) {}
+  }
+
+  document.getElementById('btn-confirm').addEventListener('click', () => {
+    const filled = allFilled();
+    const note = isPractice ? '' :
+      '<p class="l-modal-footnote">(※ 정답을 확인하시면 플레이 시간이 기록됩니다.<br>기록은 헤더 오른쪽 버튼에서 확인하실 수 있습니다.)</p>';
+    if (filled) {
+      showModal(
+        '<p class="l-modal-msg">정답을 확인할까요?</p>' +
+        note +
+        '<div class="l-modal-actions">' +
+        '<span class="l-modal-action" data-act="cancel">취소</span>' +
+        '<span class="l-modal-action primary" data-act="proceed">확인</span>' +
+        '</div>'
+      );
+    } else {
+      showModal(
+        '<p class="l-modal-msg">아직 채우지 않은 칸이 있어요.</p>' +
+        '<p class="l-modal-msg">그래도 전체 정답을 보시겠습니까?</p>' +
+        note +
+        '<div class="l-modal-actions">' +
+        '<span class="l-modal-action" data-act="cancel">취소</span>' +
+        '<span class="l-modal-action primary" data-act="proceed">네, 확인할게요</span>' +
+        '</div>'
+      );
+    }
+    box.querySelector('[data-act="cancel"]').addEventListener('click', hideModal);
+    box.querySelector('[data-act="proceed"]').addEventListener('click', () => {
+      hideModal();
+      isGraded = true;
+      recordAttempt();
+      renderBoard();
+      renderMainQuiz();
+    });
+  });
+
+  document.getElementById('btn-restart').addEventListener('click', () => {
+    showModal(
+      '<p class="l-modal-msg">정말 처음으로 돌아가시겠습니까?</p>' +
+      '<p class="l-modal-msg">입력한 답과 힌트 사용 기록이 사라집니다.</p>' +
+      '<div class="l-modal-actions">' +
+      '<span class="l-modal-action" data-act="cancel">취소</span>' +
+      '<span class="l-modal-action primary" data-act="proceed">네, 돌아갈게요</span>' +
+      '</div>'
+    );
+    box.querySelector('[data-act="cancel"]').addEventListener('click', hideModal);
+    box.querySelector('[data-act="proceed"]').addEventListener('click', () => { location.href = 'index.html'; });
+  });
+
+  // ---- 단서 + 힌트 ----
+  const pastelsL = ['transparent','rgba(255,170,170,.3)','rgba(250,205,90,.3)','rgba(120,215,160,.28)','rgba(110,175,245,.28)','rgba(190,150,240,.28)'];
+  const pastelsLDark = ['transparent','rgba(255,120,120,.22)','rgba(230,190,90,.22)','rgba(90,200,140,.2)','rgba(100,160,240,.2)','rgba(180,140,240,.2)'];
+  let hintLines = [];
+  const maxHints = 3;
+
+  function renderSentences() {
+    const wrap = document.getElementById('sentences');
+    wrap.innerHTML = '';
+    hintLines.forEach(text => {
+      const div = document.createElement('div');
+      div.className = 'l-sentence l-hint-line';
+      div.dataset.hl = '0';
+      div.innerHTML = `<span class="l-num">0.</span><mark class="l-mark">${text}</mark>`;
+      wrap.appendChild(div);
+    });
+    clueSentences.forEach((text, i) => {
+      const div = document.createElement('div');
+      div.className = 'l-sentence';
+      div.dataset.hl = '0';
+      div.innerHTML = `<span class="l-num">${i + 1}.</span><mark class="l-mark">${text}</mark>`;
+      wrap.appendChild(div);
+    });
+  }
+  document.getElementById('sentences').addEventListener('click', e => {
+    const s = e.target.closest('.l-sentence'); if (!s) return;
+    s.dataset.hl = (parseInt(s.dataset.hl, 10) + 1) % pastelsL.length;
+    const dark = document.body.dataset.mode === 'dark';
+    const arr = dark ? pastelsLDark : pastelsL;
+    s.querySelector('.l-mark').style.background = arr[s.dataset.hl];
+  });
+
+  // 힌트: 소거형 또는 직접형(서수 위치) 문장만 제공 (실제 생성된 정답 기준)
+  function generateHint() {
+    const catNames = Object.keys(categories);
+    const empty = [];
+    catNames.forEach(cat => {
+      rows.forEach((r, ri) => { const key = `${ri}-${cat}`; if (!answers[key]) empty.push({ ri, cat }); });
+    });
+    if (!empty.length) return '모든 칸이 채워져 있다.';
+
+    const pick = empty[Math.floor(Math.random() * empty.length)];
+    if (Math.random() < 0.5) {
+      // 소거형: 비어있는 칸 하나를 골라, 그 칸이 될 수 없는 값을 알려준다 (실제 정답 기준으로 오답만 선택)
+      const wrongOpts = categories[pick.cat].filter(v => v !== solution[pick.cat][pick.ri]);
+      const wrong = wrongOpts[Math.floor(Math.random() * wrongOpts.length)];
+      return `${rows[pick.ri]}의 ${pick.cat}${eunNeun(pick.cat)} ${wrong}${iGa(wrong)} 아니다.`;
+    }
+    // 직접형: 비어있는 칸 하나의 실제 값을 서수 위치 문장으로 알려준다
+    return directText(pick.cat, pick.ri, solution[pick.cat][pick.ri], rows.length);
+  }
+  function updateHintDots() {
+    document.querySelectorAll('#hintdots .l-hint-dot').forEach((d, i) => d.classList.toggle('used', i < hintLines.length));
+  }
+  document.getElementById('btn-hint').addEventListener('click', () => {
+    if (hintLines.length >= maxHints) return;
+    showModal(
+      '<p class="l-modal-msg l-modal-msg-strong">힌트를 보시겠습니까?</p>' +
+      `<p class="l-modal-msg">잔여 힌트 갯수: ${maxHints - hintLines.length}/${maxHints}</p>` +
+      '<div class="l-modal-actions">' +
+      '<span class="l-modal-action" data-act="no">아니요</span>' +
+      '<span class="l-modal-action primary" data-act="yes">네</span>' +
+      '</div>'
+    );
+    box.querySelector('[data-act="no"]').addEventListener('click', hideModal);
+    box.querySelector('[data-act="yes"]').addEventListener('click', () => {
+      hideModal();
+      hintLines.unshift(generateHint());
+      updateHintDots();
+      renderSentences();
+      if (hintLines.length >= maxHints) document.getElementById('btn-hint').classList.add('disabled');
+    });
+  });
+
+  // ---- 타이머 (도전 모드만 표시/작동, 시간제한 없음) ----
+  const timerEl = document.getElementById('timer');
+  const pauseBtn = document.getElementById('btn-pause');
+  let elapsed = 0, running = true, timerInterval;
+  function renderTimer() {
+    const m = Math.floor(elapsed / 60), s = elapsed % 60;
+    timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  function startTimer() { timerInterval = setInterval(() => { elapsed++; renderTimer(); }, 1000); }
+  pauseBtn.innerHTML = icons.pause;
+  if (isPractice) {
+    document.getElementById('timer-group').style.display = 'none';
+  } else {
+    startTimer();
+  }
+  pauseBtn.addEventListener('click', () => {
+    running = !running;
+    if (running) { startTimer(); pauseBtn.innerHTML = icons.pause; }
+    else { clearInterval(timerInterval); pauseBtn.innerHTML = icons.play; }
+  });
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    showModal(
+      '<p class="l-modal-msg">시간을 초기화할까요?</p>' +
+      '<p class="l-modal-msg">지금까지의 진행 시간이 사라지고,<br>이후 기록되는 시간은 0부터 다시 셉니다.</p>' +
+      '<div class="l-modal-actions">' +
+      '<span class="l-modal-action" data-act="cancel">취소</span>' +
+      '<span class="l-modal-action primary" data-act="proceed">초기화</span>' +
+      '</div>'
+    );
+    box.querySelector('[data-act="cancel"]').addEventListener('click', hideModal);
+    box.querySelector('[data-act="proceed"]').addEventListener('click', () => { hideModal(); elapsed = 0; renderTimer(); });
+  });
+
+  renderMainQuiz();
+  renderBoard();
+  renderSentences();
+  } // end init()
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+</body>
+</html>
