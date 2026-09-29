@@ -1,4 +1,6 @@
+// 서비스 워커: 앱 파일을 캐시에 저장해 오프라인에서도 열리게 한다
 const CACHE = "einstein-puzzle-v1";
+// 오프라인용으로 미리 캐시해 둘 파일 목록
 const ASSETS = ["./", "./index.html", "./game.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png"];
 
 self.addEventListener("install", (e) => {

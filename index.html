@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Einstein's Riddle 시작 화면: 스플래시, 그리드 크기(행×열)와 모드 선택, 테마·설정 모달 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -121,6 +122,7 @@
 </head>
 <body data-mode="light" data-font="sans">
 <script>
+  // 화면이 그려지기 전에 저장된 테마·글꼴·글자 크기를 먼저 적용해 깜빡임을 막는다
   (function () {
     var m = localStorage.getItem('epz_theme');
     var f = localStorage.getItem('epz_font');
@@ -182,24 +184,28 @@
 <div class="l-modal-overlay" id="modalOverlay"><div class="l-modal" id="modalBox"></div></div>
 
 <script>
+  // 1.5초 뒤 스플래시(로고 화면)를 페이드아웃한다
   setTimeout(() => {
     const s = document.getElementById('splash');
     s.classList.add('fade');
     setTimeout(() => { s.style.display = 'none'; }, 650);
   }, 1500);
 
+  // 테마 버튼에 쓰는 모드별 아이콘
   const icons = {
     light: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
     navy: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 16a3 3 0 0 1 0 6H7a5 5 0 1 1 4.9-6z"/><path d="M18.376 14.512a6 6 0 0 0 3.461-4.127c.148-.625-.659-.97-1.248-.714a4 4 0 0 1-5.259-5.26c.255-.589-.09-1.395-.716-1.248a6 6 0 0 0-4.594 5.36"/></svg>',
     dark: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>',
     cream: '<svg class="l-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/></svg>',
   };
+  // 테마 버튼을 누를 때마다 도는 순서
   const modeSeq = ['light', 'navy', 'dark', 'cream'];
   let mode = document.body.dataset.mode || 'light';
   let font = document.body.dataset.font || 'sans';
   let textsize = document.body.dataset.textsize || '0';
   document.getElementById('btn-theme').innerHTML = icons[mode];
 
+  // 현재 테마·글꼴·글자 크기를 localStorage에 저장한다
   function persist() {
     localStorage.setItem('epz_theme', mode);
     localStorage.setItem('epz_font', font);
@@ -215,6 +221,7 @@
 
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
+  // 가운데 모달을 연다 / 닫는다
   function showModal(html) { box.innerHTML = html; overlay.classList.add('show'); }
   function hideModal() { overlay.classList.remove('show'); }
   overlay.addEventListener('click', e => { if (e.target === overlay) hideModal(); });
@@ -229,8 +236,10 @@
 
   // ---- 모드 탭 / 행·열 / 시작 링크 ----
   let selectedMode = 'practice';
+  // 선택한 행·열 수 기본값
   let rowsN = 4, colsN = 4;
 
+  // 「시작하기」 링크 주소에 선택한 모드와 크기를 쿼리로 붙인다
   function updateStartLink() {
     document.getElementById('start-link').href = `game.html?mode=${selectedMode}&rows=${rowsN}&cols=${colsN}`;
   }
@@ -243,7 +252,9 @@
     });
   });
 
+  // 열려 있는 숫자 선택 목록을 닫는다
   function closeOpts() { document.querySelectorAll('.l-opts').forEach(o => o.remove()); }
+  // 버튼 아래에 3~10 숫자 목록을 띄우고, 고른 값을 onPick으로 넘긴다
   function openNumberOpts(btn, onPick) {
     closeOpts();
     const r = btn.getBoundingClientRect();

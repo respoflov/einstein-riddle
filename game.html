@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Einstein's Riddle 게임 화면: 퍼즐 생성기(정답 생성 → 단서 생성 → 유일해 검증)와 답안 입력·힌트·타이머 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -159,6 +160,7 @@
 </head>
 <body data-mode="light" data-font="sans" data-textsize="0">
 <script>
+  // 화면이 그려지기 전에 저장된 테마·글꼴·글자 크기를 먼저 적용해 깜빡임을 막는다
   (function () {
     var m = localStorage.getItem('epz_theme');
     var f = localStorage.getItem('epz_font');
@@ -190,6 +192,7 @@
   // ======================================================================
   // 한글 조사 helper (받침 유무 기준)
   // ======================================================================
+  // 단어의 마지막 글자에 받침이 있는지 확인한다 (조사 선택용)
   function hasBatchim(word) {
     const ch = word[word.length - 1];
     const code = ch.charCodeAt(0);
@@ -202,6 +205,7 @@
   function iDa(word) { return hasBatchim(word) ? '이다' : '다'; }
   function waGwa(word) { return hasBatchim(word) ? '과' : '와'; }
 
+  // 배열을 복사해 무작위로 섞는다 (Fisher-Yates)
   function shuffle(arr) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -217,6 +221,7 @@
   // 통해 직접 추론). 국적은 항상 포함되는 첫 번째 항목.
   // ======================================================================
   const COLOR_VALUES = ['빨간색','파란색','초록색','노란색','하늘색','보라색','분홍색','흰색','검은색','주황색'];
+  // 카테고리 후보와 각 카테고리의 값 목록. 퍼즐마다 이 중 일부를 골라 쓴다
   const CATEGORY_POOL = [
     ['국적', ['한국','중국','인도','태국','이집트','케냐','브라질','멕시코','호주','터키']],
     ['동물', ['개','고양이','새','물고기','말','토끼','거북이','햄스터','앵무새','다람쥐']],
@@ -244,6 +249,7 @@
     '꽃': v => `${v}${eulReul(v)} 좋아하는 사람`,
     '스포츠': v => `${v}${eulReul(v)} 즐기는 사람`,
   };
+  // 카테고리별 "~한다" 서술어 만들기 (같은 집 단서 문장의 술어)
   const ACTION = {
     '국적': v => `${v}인이다`,
     '동물': v => `${v}${eulReul(v)} 기른다`,
@@ -269,6 +275,7 @@
   }
 
   const ORDINAL_WORDS = ['첫','두','세','네','다섯','여섯','일곱','여덟','아홉','열'];
+  // 집 번호를 "왼쪽에서 두 번째 집"·"가운데 집" 같은 서수 표현으로 바꾼다
   function ordinalPhrase(h, numHouses) {
     const mid = (numHouses - 1) / 2;
     if (numHouses % 2 === 1 && h === mid) {
@@ -281,6 +288,7 @@
   // ======================================================================
   // 실제 CSP 솔버 (집 단위로 한 칸씩 배정, 백트래킹 + 조기 가지치기)
   // ======================================================================
+  // 주어진 단서들로 가능한 해를 센다. limit개까지만 찾고, 탐색 단계가 상한을 넘으면 중단한다
   function trySolve(chosenCats, valuePools, numHouses, sameClues, adjClues, unorderedAdjClues, betweenClues, directClues, limit, deadline) {
     const remaining = {};
     chosenCats.forEach(c => remaining[c] = new Set(valuePools[c]));
@@ -300,6 +308,7 @@
     const directIdx = {};
     directClues.forEach(d => { directIdx[`${d.cat}|${d.house}`] = d.val; });
 
+    // 같은 집 단서를 어기는 배정인지 확인한다
     function violatesSame(cat, val, houseAssign) {
       const entries = sameIdx[cat];
       for (let i = 0; i < entries.length; i++) {
@@ -311,6 +320,7 @@
       }
       return false;
     }
+    // 순서가 있는 인접 단서("바로 왼쪽")를 어기는지 확인한다
     function checkAdjacency(h, houseAssign) {
       for (const cl of adjClues) {
         if (houseAssign[cl.cat] === cl.valRight) {
@@ -320,6 +330,7 @@
       }
       return true;
     }
+    // 순서 없는 인접·사이 단서를 어기는지 확인한다
     function checkUnordered() {
       for (const cl of unorderedAdjClues) {
         const ha = placedHouse[cl.catA][cl.valA];
@@ -337,6 +348,7 @@
       return true;
     }
 
+    // 집 h의 카테고리 catIdx부터 값을 하나씩 넣어 보며 되돌아가는 탐색(백트래킹)
     function backtrack(h, catIdx, houseAssign) {
       if (solCount >= limit || steps > STEP_CAP) return;
       steps++;
@@ -378,6 +390,7 @@
   // 퍼즐 생성기: 랜덤 정답 → 후보 단서 풀(고전 제브라 퍼즐 스타일 문장) →
   // 유일해 보장 → 단서 15~20개로 축소 → 메인 퀴즈 선정
   // ======================================================================
+  // "왼쪽에서 두 번째 집 사람은 ~한다" 같은 위치 직접형 단서 문장을 만든다
   function directText(cat, house, val, numHouses) {
     const ord = ordinalPhrase(house, numHouses);
     if (cat === '색깔') {
@@ -390,6 +403,7 @@
       : `${ord.subject}은 ${ACTION[cat](val)}.`;
   }
 
+  // 퍼즐 하나를 만든다: 무작위 정답 → 후보 단서 → 유일해가 되도록 단서를 줄인다 → 메인 퀴즈 선정
   function generatePuzzle(numCategories, numHouses) {
     numCategories = Math.max(3, Math.min(10, numCategories || 4));
     numHouses = Math.max(3, Math.min(10, numHouses || 4));
@@ -535,6 +549,7 @@
     const requiredDirect = [];
     const genDeadline = performance.now() + 4000;
 
+    // 현재 남은 단서만으로 해가 정확히 하나인지 확인한다 (호출당 시간 제한 250ms)
     function isUnique() {
       const perCallDeadline = performance.now() + 250;
       const allDirect = requiredDirect.concat(activeDirect);
@@ -569,6 +584,7 @@
 
     // ---- 단서 10~20개 목표로 그리디 축소 (유일해 유지가 최우선, 큰 그리드는 초과 가능) ----
     const targetCount = 10 + Math.floor(Math.random() * 11);
+    // 단서 종류 이름으로 해당 단서 배열을 꺼낸다
     function arrFor(kind) {
       if (kind === 'same') return activeSame;
       if (kind === 'adj') return activeAdj;
@@ -645,6 +661,7 @@
   let textsize = document.body.dataset.textsize || '0';
   document.getElementById('btn-theme').innerHTML = icons.theme[mode];
 
+  // 현재 테마·글꼴·글자 크기를 localStorage에 저장한다
   function persist() {
     localStorage.setItem('epz_theme', mode);
     localStorage.setItem('epz_font', font);
@@ -660,6 +677,7 @@
 
   const overlay = document.getElementById('modalOverlay');
   const box = document.getElementById('modalBox');
+  // 가운데 모달을 연다 / 닫는다
   function showModal(html) { box.innerHTML = html; overlay.classList.add('show'); }
   function hideModal() { overlay.classList.remove('show'); }
   overlay.addEventListener('click', e => { if (e.target === overlay) hideModal(); });
@@ -737,6 +755,7 @@
 
   requestAnimationFrame(() => requestAnimationFrame(init));
 
+  // 퍼즐을 생성하고 메인 퀴즈·답안 표·단서·힌트·타이머를 모두 준비한다
   function init() {
   const puzzle = generatePuzzle(numCategories, numHouses);
   const categories = puzzle.categories;
@@ -797,6 +816,7 @@
     }
   }
 
+  // 메인 퀴즈(마지막에 맞힐 질문)와 답 선택 칩을 그린다
   function renderMainQuiz() {
     document.getElementById('mainquiz-text').textContent = puzzle.mainQuiz.headline;
     const wrap = document.getElementById('mainquiz-answer');
@@ -813,6 +833,7 @@
   }
 
   // ---- 답안 표 ----
+  // 답안 표(집 번호 × 카테고리)를 그린다. 칸이 많으면 가로로 스크롤된다
   function renderBoard() {
     const wrap = document.getElementById('rows');
     let html = '<div class="l-board-wrap" id="boardWrap"><table class="l-board"><tr><th class="l-corner"></th>' +
@@ -844,7 +865,9 @@
     const bw = document.getElementById('boardWrap');
     if (bw) bw.classList.toggle('overflowing', bw.scrollWidth > bw.clientWidth + 1);
   });
+  // 열려 있는 선택 목록을 닫는다
   function closeOpts() { document.querySelectorAll('.l-opts').forEach(o => o.remove()); }
+  // 칸 아래에 값 목록(맨 위 "ー"는 지우기)을 띄워 답을 고르게 한다
   function openOpts(btn, key, opts) {
     closeOpts();
     const r = btn.getBoundingClientRect();
@@ -864,10 +887,12 @@
   document.addEventListener('click', e => { if (!e.target.closest('.l-chip-btn') && !e.target.closest('.l-opts')) closeOpts(); });
   window.addEventListener('scroll', closeOpts, true);
 
+  // 답안 표와 메인 퀴즈 칸이 모두 채워졌는지 확인한다
   function allFilled() {
     const total = rows.length * Object.keys(categories).length + 1;
     return total === Object.values(answers).filter(Boolean).length;
   }
+  // 답안 표와 메인 퀴즈 답이 모두 정답과 같은지 확인한다
   function isCorrect() {
     const boardOk = Object.keys(categories).every(cat =>
       rows.every((r, ri) => answers[`${ri}-${cat}`] === solution[cat][ri])
@@ -875,6 +900,7 @@
     return boardOk && answers['mainquiz'] === puzzle.mainQuiz.correctAnswer;
   }
 
+  // 도전 모드 기록(크기·걸린 시간·정답 여부·힌트 수)을 localStorage에 쌓는다
   function recordAttempt() {
     if (isPractice) return;
     try {
@@ -938,6 +964,7 @@
   let hintLines = [];
   const maxHints = 3;
 
+  // 단서 문장 목록을 번호와 함께 그리고 핵심 단어에 형광펜 색을 입힌다
   function renderSentences() {
     const wrap = document.getElementById('sentences');
     wrap.innerHTML = '';
@@ -983,6 +1010,7 @@
     // 직접형: 비어있는 칸 하나의 실제 값을 서수 위치 문장으로 알려준다
     return directText(pick.cat, pick.ri, solution[pick.cat][pick.ri], rows.length);
   }
+  // 사용한 힌트 수만큼 힌트 점을 채운다
   function updateHintDots() {
     document.querySelectorAll('#hintdots .l-hint-dot').forEach((d, i) => d.classList.toggle('used', i < hintLines.length));
   }
@@ -1010,10 +1038,12 @@
   const timerEl = document.getElementById('timer');
   const pauseBtn = document.getElementById('btn-pause');
   let elapsed = 0, running = true, timerInterval;
+  // 경과 시간을 MM:SS로 표시한다
   function renderTimer() {
     const m = Math.floor(elapsed / 60), s = elapsed % 60;
     timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
+  // 1초마다 경과 시간을 늘리는 타이머를 시작한다
   function startTimer() { timerInterval = setInterval(() => { elapsed++; renderTimer(); }, 1000); }
   pauseBtn.innerHTML = icons.pause;
   if (isPractice) {
